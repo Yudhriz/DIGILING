@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { User, Lock, LogIn } from "lucide-react";
 
+import { Link } from "react-router-dom";
+
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { useAuthStore } from "../../store/authStore";
@@ -114,12 +116,12 @@ const LoginForm: React.FC = () => {
 
       <div className='text-center text-sm'>
         <span className='text-gray-600'>Don't have an account?</span>{" "}
-        <a
-          href='/register'
+        <Link
+          to='/register'
           className='font-medium text-primary-600 hover:text-primary-500'
         >
           Register
-        </a>
+        </Link>
       </div>
     </form>
   );

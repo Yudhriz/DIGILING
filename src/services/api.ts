@@ -1,5 +1,3 @@
-// services/api.ts
-
 import { getAccessToken } from "../utils/auth";
 
 const API_BASE_URL = "https://cloud-backend-main-uq72da.laravel.cloud/api";
