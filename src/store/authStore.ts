@@ -7,15 +7,16 @@ import {
   User,
   UserRole,
 } from "../utils/auth";
-import * as authApi from "../services/api"; // pastikan diimpor dengan benar
+import * as authApi from "../services/authService";
+
+type AuthError = string | Record<string, string[]>;
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
-  error: string | null;
+  error: AuthError | null;
   isLoggedIn: boolean;
 
-  // Actions
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   register: (userData: {
@@ -24,11 +25,12 @@ interface AuthState {
     email: string;
     password: string;
   }) => Promise<void>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
   resetPassword: (payload: {
     email: string;
-    token: string;
-    password: string;
-    password_confirmation: string;
+    otp: string;
+    new_password: string;
+    new_password_confirmation: string;
   }) => Promise<{ message: string }>;
   updateUser: (userData: Partial<User>) => void;
   hasRole: (role: UserRole | UserRole[]) => boolean;
@@ -40,22 +42,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   isLoggedIn: isAuthenticated(),
 
-  login: async (username: string, password: string) => {
+  login: async (username, password) => {
     set({ isLoading: true, error: null });
 
     try {
       const response = await authApi.login({ username, password });
       setAuthTokens(response.token);
-
       set({
         user: response.user,
         isLoggedIn: true,
         isLoading: false,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      const apiErrors =
+        error?.response?.data?.errors || error?.response?.data?.error || null;
+
       set({
-        error: error instanceof Error ? error.message : "Authentication failed",
+        error: apiErrors || error.message || "Authentication failed",
         isLoading: false,
         isLoggedIn: false,
       });
@@ -73,12 +77,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await authApi.register(userData);
       set({ isLoading: false });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+
+      let apiErrors: AuthError | null = null;
+      let message = "Registration failed";
+
+      if (error?.response?.data?.errors) {
+        apiErrors = error.response.data.errors;
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+
       set({
-        error: error instanceof Error ? error.message : "Registration failed",
+        error: apiErrors || message,
         isLoading: false,
       });
+
+      throw new Error(message);
+    }
+  },
+
+  forgotPassword: async (email) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await authApi.forgotPassword({ email });
+      set({ isLoading: false });
+      return response;
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+
+      const apiErrors =
+        error?.response?.data?.errors ||
+        error?.response?.data?.message ||
+        error.message ||
+        "Failed to send OTP";
+
+      set({
+        error: apiErrors,
+        isLoading: false,
+      });
+
       throw error;
     }
   },
@@ -90,12 +132,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authApi.resetPassword(payload);
       set({ isLoading: false });
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Password reset error:", error);
+
+      const apiErrors =
+        error?.response?.data?.errors ||
+        error?.response?.data?.message ||
+        error.message ||
+        "Password reset failed";
+
       set({
-        error: error instanceof Error ? error.message : "Password reset failed",
+        error: apiErrors,
         isLoading: false,
       });
+
       throw error;
     }
   },

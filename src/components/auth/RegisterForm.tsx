@@ -9,6 +9,8 @@ import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { useAuthStore } from "../../store/authStore";
 
+import { renderErrorMessage } from "../../utils/renderError";
+
 interface RegisterFormData {
   name: string;
   username: string;
@@ -41,7 +43,7 @@ const RegisterForm: React.FC = () => {
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
       {error && (
         <div className='p-3 bg-error-50 border border-error-200 text-error-700 rounded-md'>
-          {error}
+          {renderErrorMessage(error)}
         </div>
       )}
 

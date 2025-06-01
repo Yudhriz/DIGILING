@@ -1,5 +1,3 @@
-// utils/auth.ts
-
 import { jwtDecode } from "jwt-decode";
 
 // Storage keys
@@ -48,7 +46,8 @@ export const setAuthTokens = (accessToken: string): void => {
     };
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
   } catch (error) {
-    console.error("Failed to decode JWT:", error);
+    console.error("[auth] Failed to decode JWT:", error);
+    clearAuthTokens(); // Clean up if token is invalid
   }
 };
 
@@ -82,7 +81,7 @@ export const getStoredUser = (): User | null => {
   try {
     return JSON.parse(userData) as User;
   } catch (error) {
-    console.error("Failed to parse stored user data:", error);
+    console.error("[auth] Failed to parse stored user data:", error);
     return null;
   }
 };
@@ -99,7 +98,7 @@ export const isTokenValid = (): boolean => {
     const now = Date.now() / 1000;
     return decoded.exp > now;
   } catch (error) {
-    console.warn("Invalid token:", error);
+    console.warn("[auth] Invalid token:", error);
     return false;
   }
 };
@@ -118,9 +117,5 @@ export const hasRole = (role: UserRole | UserRole[]): boolean => {
   const user = getStoredUser();
   if (!user) return false;
 
-  if (Array.isArray(role)) {
-    return role.includes(user.role);
-  }
-
-  return user.role === role;
+  return Array.isArray(role) ? role.includes(user.role) : user.role === role;
 };

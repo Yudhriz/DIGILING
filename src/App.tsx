@@ -1,15 +1,22 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/authStore';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useAuthStore } from "./store/authStore";
 
 // Layout
-import Layout from './components/layout/Layout';
+import Layout from "./components/layout/Layout";
 
 // Pages
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import DashboardPage from './pages/dashboard/DashboardPage';
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import DashboardPage from "./pages/dashboard/DashboardPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -18,11 +25,11 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isLoggedIn } = useAuthStore();
-  
+
   if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to='/login' replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -32,22 +39,24 @@ function App() {
       <Layout>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          
+          <Route path='/' element={<HomePage />} />
+          <Route path='/login' element={<LoginPage />} />
+          <Route path='/forgot-password' element={<ForgotPasswordPage />} />
+          <Route path='/register' element={<RegisterPage />} />
+          <Route path='/reset-password' element={<ResetPasswordPage />} />
+
           {/* Protected Routes */}
-          <Route 
-            path="/dashboard" 
+          <Route
+            path='/dashboard'
             element={
               <ProtectedRoute>
                 <DashboardPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          
+
           {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
       </Layout>
     </Router>
