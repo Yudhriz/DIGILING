@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import {
   getStoredUser,
-  setAuthTokens,
+  setAccessToken,
+  setUserData,
   clearAuthTokens,
   isAuthenticated,
   User,
@@ -44,24 +45,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (username, password) => {
     set({ isLoading: true, error: null });
-
     try {
-      const response = await authApi.login({ username, password });
-      setAuthTokens(response.token);
+      const loginResponse = await authApi.login({ username, password });
+      setAccessToken(loginResponse.token);
+
+      const meResponse: any = await authApi.getMe();
+      const userProfile = meResponse.user;
+
+      setUserData(userProfile);
+
       set({
-        user: response.user,
+        user: userProfile,
         isLoggedIn: true,
         isLoading: false,
+        error: null,
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      const apiErrors =
-        error?.response?.data?.errors || error?.response?.data?.error || null;
-
+      clearAuthTokens();
       set({
-        error: apiErrors || error.message || "Authentication failed",
+        error: error.message || "Authentication failed",
         isLoading: false,
         isLoggedIn: false,
+        user: null,
       });
     }
   },
@@ -73,16 +79,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (userData) => {
     set({ isLoading: true, error: null });
-
     try {
       await authApi.register(userData);
       set({ isLoading: false });
     } catch (error: any) {
       console.error("Registration error:", error);
-
       let apiErrors: AuthError | null = null;
       let message = "Registration failed";
-
       if (error?.response?.data?.errors) {
         apiErrors = error.response.data.errors;
       } else if (error?.response?.data?.message) {
@@ -90,70 +93,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (error instanceof Error) {
         message = error.message;
       }
-
       set({
         error: apiErrors || message,
         isLoading: false,
       });
-
       throw new Error(message);
     }
   },
 
   forgotPassword: async (email) => {
     set({ isLoading: true, error: null });
-
     try {
       const response = await authApi.forgotPassword({ email });
       set({ isLoading: false });
       return response;
     } catch (error: any) {
       console.error("Forgot password error:", error);
-
       const apiErrors =
         error?.response?.data?.errors ||
         error?.response?.data?.message ||
         error.message ||
         "Failed to send OTP";
-
       set({
         error: apiErrors,
         isLoading: false,
       });
-
       throw error;
     }
   },
 
   resetPassword: async (payload) => {
     set({ isLoading: true, error: null });
-
     try {
       const response = await authApi.resetPassword(payload);
       set({ isLoading: false });
       return response;
     } catch (error: any) {
       console.error("Password reset error:", error);
-
       const apiErrors =
         error?.response?.data?.errors ||
         error?.response?.data?.message ||
         error.message ||
         "Password reset failed";
-
       set({
         error: apiErrors,
         isLoading: false,
       });
-
       throw error;
     }
   },
 
   updateUser: (userData) => {
-    if (!get().user) return;
+    const currentUser = get().user;
+    if (!currentUser) return;
 
-    const updatedUser = { ...get().user, ...userData } as User;
+    const updatedUser = { ...currentUser, ...userData } as User;
     set({ user: updatedUser });
     localStorage.setItem("digiling_user", JSON.stringify(updatedUser));
   },
@@ -161,11 +155,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hasRole: (role) => {
     const { user } = get();
     if (!user) return false;
-
-    if (Array.isArray(role)) {
-      return role.includes(user.role);
-    }
-
-    return user.role === role;
+    return Array.isArray(role) ? role.includes(user.role) : user.role === role;
   },
 }));

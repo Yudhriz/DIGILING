@@ -29,7 +29,13 @@ const LoginForm: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data.username, data.password);
-      navigate("/dashboard");
+      const user = useAuthStore.getState().user;
+
+      if (user && (user.role === "admin" || user.role === "guru_bk")) {
+        navigate("/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       console.error("Login failed:", err);
     }

@@ -17,6 +17,10 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import AttendancePage from "./pages/attendance/AttendancePage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import GuruBKStudentPage from "./pages/gurubk/GuruBKStudentPage";
+import DetailStudentPage from "./pages/students/DetailStudentPage";
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -41,9 +45,12 @@ function App() {
           {/* Public Routes */}
           <Route path='/' element={<HomePage />} />
           <Route path='/login' element={<LoginPage />} />
-          <Route path='/forgot-password' element={<ForgotPasswordPage />} />
           <Route path='/register' element={<RegisterPage />} />
-          <Route path='/reset-password' element={<ResetPasswordPage />} />
+          <Route path='/forgot-password' element={<ForgotPasswordPage />} />
+          <Route
+            path='/reset-password/:token?'
+            element={<ResetPasswordPage />}
+          />
 
           {/* Protected Routes */}
           <Route
@@ -51,6 +58,56 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE UNTUK HALAMAN ABSENSI --- */}
+          <Route
+            path='/siswa/absensi'
+            element={
+              <ProtectedRoute>
+                <AttendancePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE UNTUK HALAMAN USER MANAGEMENT (ADMIN) --- */}
+          <Route
+            path='/dashboard/user-management'
+            element={
+              <ProtectedRoute>
+                <UserManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE UNTUK HALAMAN DETAIL SISWA (ADMIN) --- */}
+          <Route
+            path='/dashboard/user-management/detail/:userId'
+            element={
+              <ProtectedRoute>
+                <DetailStudentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE UNTUK HALAMAN DETAIL SISWA (GURU BK) --- */}
+          <Route
+            path='/dashboard/guru/daftar-siswa/detail/:userId'
+            element={
+              <ProtectedRoute>
+                <DetailStudentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE UNTUK HALAMAN SISWA MANAGEMENT (GURU BK) --- */}
+          <Route
+            path='/dashboard/guru/daftar-siswa'
+            element={
+              <ProtectedRoute>
+                <GuruBKStudentPage />
               </ProtectedRoute>
             }
           />
