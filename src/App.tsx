@@ -21,6 +21,7 @@ import AttendancePage from "./pages/attendance/AttendancePage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import GuruBKStudentPage from "./pages/gurubk/GuruBKStudentPage";
 import DetailStudentPage from "./pages/students/DetailStudentPage";
+import AttendanceReportPage from "./pages/reports/AttendanceReportPage";
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -72,6 +73,16 @@ function App() {
             }
           />
 
+          {/* --- ROUTE UNTUK HALAMAN PROFILE SISWA --- */}
+          <Route
+            path='/siswa/profile-saya'
+            element={
+              <ProtectedRoute>
+                <DetailStudentPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* --- ROUTE UNTUK HALAMAN USER MANAGEMENT (ADMIN) --- */}
           <Route
             path='/dashboard/user-management'
@@ -108,6 +119,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <GuruBKStudentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK LAPORAN ABSENSI (ADMIN & GURU BK) --- */}
+          <Route
+            path='/dashboard/attendance-report'
+            element={
+              <ProtectedRoute>
+                <AttendanceReportPage />
               </ProtectedRoute>
             }
           />

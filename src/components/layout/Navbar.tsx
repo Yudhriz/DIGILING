@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -12,13 +12,29 @@ import {
 import { useAuthStore } from "../../store/authStore";
 import Button from "../ui/Button";
 
-const navLinks = [
-  { to: "/siswa/absensi", label: "Absensi Siswa" },
-  { to: "/profil", label: "Profil Siswa" },
-  { to: "/jurnal", label: "Jurnal Kasus" },
-  { to: "/aspirasi", label: "Wadah Aspirasi" },
-  { to: "/konsultasi", label: "Konsultasi" },
-];
+// Definisikan item navigasi untuk setiap peran
+const navLinksConfig = {
+  admin: [
+    { to: "/dashboard", label: "Dashboard" },
+    { to: "/dashboard/user-management", label: "User Management" },
+    { to: "/dashboard/guru/daftar-siswa", label: "Daftar Siswa" }, // Admin bisa lihat juga
+    { to: "/reports", label: "Laporan" },
+  ],
+  guru_bk: [
+    { to: "/dashboard", label: "Dashboard" },
+    { to: "/dashboard/guru/daftar-siswa", label: "Daftar Siswa" },
+    { to: "/jurnal-kasus", label: "Jurnal Kasus" },
+    { to: "/konsultasi", label: "Konsultasi" },
+    { to: "/wadah-aspirasi", label: "Wadah Aspirasi" },
+  ],
+  siswa: [
+    { to: "/siswa/absensi", label: "Absensi Siswa" },
+    { to: "/siswa/profile-saya", label: "Profil Siswa" },
+    { to: "/jurnal", label: "Jurnal Kasus" },
+    { to: "/aspirasi", label: "Wadah Aspirasi" },
+    { to: "/konsultasi", label: "Konsultasi" },
+  ],
+};
 
 const Navbar: React.FC = () => {
   const location = useLocation();
@@ -29,7 +45,24 @@ const Navbar: React.FC = () => {
   const toggleMenu = () => setIsOpen((prev) => !prev);
   const toggleUserMenu = () => setIsUserMenuOpen((prev) => !prev);
 
-  if (["/login", "/register", "/forgot-password"].includes(location.pathname)) {
+  // Tentukan link navigasi yang akan ditampilkan berdasarkan peran pengguna
+  const navLinks = useMemo(() => {
+    if (!isLoggedIn || !user?.role) return [];
+    return navLinksConfig[user.role] || [];
+  }, [isLoggedIn, user]);
+
+  // Tentukan link untuk halaman profil berdasarkan peran
+  const profileLink = useMemo(() => {
+    if (!user) return "/";
+    if (user.role === "siswa") return "/profil-saya";
+    // Admin dan Guru BK diarahkan ke halaman detail dengan ID mereka
+    return `/user-management/detail/${user.id}`;
+  }, [user]);
+
+  if (
+    ["/login", "/register", "/forgot-password"].includes(location.pathname) ||
+    location.pathname.startsWith("/reset-password")
+  ) {
     return null;
   }
 
@@ -39,7 +72,9 @@ const Navbar: React.FC = () => {
         <div className='flex justify-between h-16'>
           <div className='flex'>
             <Link
-              to='/'
+              to={
+                isLoggedIn ? (user?.role === "siswa" ? "/" : "/dashboard") : "/"
+              }
               className='flex items-center text-[#0066cc] font-bold text-xl'
             >
               <img src='/Logo.png' alt='Logo Digiling' className='h-16 w-16' />
@@ -64,7 +99,7 @@ const Navbar: React.FC = () => {
           </div>
 
           <div className='hidden sm:flex sm:items-center space-x-4'>
-            {isLoggedIn ? (
+            {isLoggedIn && user ? (
               <>
                 <button
                   className='p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none'
@@ -83,12 +118,12 @@ const Navbar: React.FC = () => {
                     onClick={toggleUserMenu}
                     className='flex text-sm items-center rounded-full focus:outline-none'
                   >
-                    <span className='mr-2 text-gray-700'>{user?.name}</span>
+                    <span className='mr-2 text-gray-700'>{user.name}</span>
                     <div className='h-8 w-8 rounded-full bg-[#0066cc] bg-opacity-10 flex items-center justify-center text-[#0066cc]'>
-                      {user?.avatarUrl ? (
+                      {user.avatarUrl ? (
                         <img
                           src={user.avatarUrl}
-                          alt={user?.name || user?.username}
+                          alt={user.name || user.username}
                           className='h-8 w-8 rounded-full'
                         />
                       ) : (
@@ -100,23 +135,28 @@ const Navbar: React.FC = () => {
 
                   {isUserMenuOpen && (
                     <div
-                      className='absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white py-1 ring-1 ring-black ring-opacity-5 z-10'
+                      className='absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white py-1 ring-1 ring-black ring-opacity-5 z-20' // z-index dinaikkan
                       role='menu'
                     >
                       <Link
-                        to='/profil'
+                        to={profileLink} // Menggunakan link profil dinamis
                         className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
+                        onClick={() => setIsUserMenuOpen(false)} // Tutup menu saat diklik
                       >
                         Profil Saya
                       </Link>
                       <Link
                         to='/pengaturan'
                         className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
+                        onClick={() => setIsUserMenuOpen(false)}
                       >
                         Pengaturan
                       </Link>
                       <button
-                        onClick={logout}
+                        onClick={() => {
+                          logout();
+                          setIsUserMenuOpen(false); // Tutup menu saat logout
+                        }}
                         className='block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
                       >
                         <div className='flex items-center'>
@@ -139,7 +179,6 @@ const Navbar: React.FC = () => {
               </>
             )}
           </div>
-
           <div className='sm:hidden flex items-center'>
             <button
               onClick={toggleMenu}
@@ -160,11 +199,12 @@ const Navbar: React.FC = () => {
       {isOpen && (
         <div className='sm:hidden'>
           <div className='pt-2 pb-3 space-y-1'>
-            {isLoggedIn ? (
+            {isLoggedIn &&
               navLinks.map((link) => (
                 <Link
-                  key={link.to}
+                  key={`mobile-${link.to}`}
                   to={link.to}
+                  onClick={() => setIsOpen(false)} // Tutup menu saat link diklik
                   className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                     location.pathname === link.to
                       ? "border-[#0066cc] text-[#0066cc] bg-blue-50"
@@ -173,33 +213,19 @@ const Navbar: React.FC = () => {
                 >
                   {link.label}
                 </Link>
-              ))
-            ) : (
-              <div className='mt-4 flex justify-center space-x-4 p-4'>
-                <Link to='/login'>
-                  <Button variant='ghost' size='md'>
-                    Masuk
-                  </Button>
-                </Link>
-                <Link to='/register'>
-                  <Button variant='primary' size='md'>
-                    Daftar
-                  </Button>
-                </Link>
-              </div>
-            )}
+              ))}
           </div>
 
-          {isLoggedIn && (
+          {isLoggedIn && user && (
             <div className='pt-4 pb-3 border-t border-gray-200'>
               <div className='flex items-center px-4'>
                 <div className='flex-shrink-0'>
                   <div className='h-10 w-10 rounded-full bg-[#0066cc] bg-opacity-10 flex items-center justify-center text-[#0066cc]'>
-                    {user?.avatarUrl ? (
+                    {user.avatarUrl ? (
                       <img
                         className='h-10 w-10 rounded-full'
                         src={user.avatarUrl}
-                        alt={user?.name || user?.username}
+                        alt={user.name || user.username}
                       />
                     ) : (
                       <User className='h-6 w-6' />
@@ -208,10 +234,10 @@ const Navbar: React.FC = () => {
                 </div>
                 <div className='ml-3'>
                   <div className='text-base font-medium text-gray-800'>
-                    {user?.name}
+                    {user.name}
                   </div>
                   <div className='text-sm font-medium text-gray-500'>
-                    {user?.email}
+                    {user.email}
                   </div>
                 </div>
                 <button className='ml-auto p-1 text-gray-500 hover:text-gray-600'>
@@ -220,19 +246,24 @@ const Navbar: React.FC = () => {
               </div>
               <div className='mt-3 space-y-1'>
                 <Link
-                  to='/profil'
+                  to={profileLink}
+                  onClick={() => setIsOpen(false)}
                   className='block px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
                 >
                   Profil Saya
                 </Link>
                 <Link
                   to='/pengaturan'
+                  onClick={() => setIsOpen(false)}
                   className='block px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
                 >
                   Pengaturan
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    logout();
+                    setIsOpen(false);
+                  }}
                   className='block w-full text-left px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
                 >
                   <div className='flex items-center'>

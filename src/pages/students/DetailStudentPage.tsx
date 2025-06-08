@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader, ArrowLeft, Edit, Save, Download } from "lucide-react";
+import toast from "react-hot-toast";
+
 import Button from "../../components/ui/Button";
 import Breadcrumb from "../../components/ui/Breadcrumb";
 import type { BreadcrumbItem } from "../../components/ui/Breadcrumb";
@@ -26,42 +28,59 @@ const DetailStudentPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false); // State untuk mode edit/view
 
   // Tentukan apakah pengguna saat ini adalah siswa yang melihat profilnya sendiri
-  const isOwnProfile =
-    loggedInUser?.id === userId && loggedInUser?.role === "siswa";
-  // Guru BK dan Admin selalu bisa edit (sesuai logika hak akses Anda)
+  const isOwnProfile = useMemo(() => {
+    return !userId && loggedInUser?.role === "siswa";
+  }, [userId, loggedInUser]);
+
   const canEdit =
     isOwnProfile ||
     loggedInUser?.role === "admin" ||
     loggedInUser?.role === "guru_bk";
 
   const loadStudentProfile = async () => {
-    if (!userId) {
-      setError("ID Siswa tidak valid.");
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     setError(null);
+
     try {
-      // Siswa mengambil profilnya sendiri, Admin/GuruBK mengambil by ID
-      const profileData = isOwnProfile
-        ? await studentService.getMyStudentProfile()
-        : await studentService.getSiswaById(userId);
+      let profileData;
+
+      // 1. Cek jika ada userId dari URL (untuk Admin/Guru BK yang melihat profil siswa lain)
+      if (userId) {
+        profileData = await studentService.getSiswaById(userId);
+      }
+      // 2. Jika tidak ada userId, cek apakah yang login adalah siswa (untuk melihat profilnya sendiri)
+      else if (loggedInUser?.role === "siswa") {
+        profileData = await studentService.getMyStudentProfile();
+      }
+      // 3. Jika tidak keduanya, berarti tidak ada data yang bisa diambil
+      else {
+        throw new Error(
+          "Halaman ini tidak bisa diakses tanpa ID pengguna untuk peran Anda."
+        );
+      }
+
       setStudentProfile(profileData);
     } catch (err) {
       console.error("Gagal memuat profil siswa:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Gagal memuat data.";
       setError(errorMessage);
-      // alert(errorMessage); // Mungkin lebih baik tampilkan di UI
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Pastikan useEffect Anda memanggil fungsi ini dan memiliki dependency yang benar
+  useEffect(() => {
+    // Hanya panggil jika ada info user yang login
+    if (loggedInUser) {
+      loadStudentProfile();
+    }
+  }, [userId, loggedInUser]);
+
   const handleDownloadCSV = () => {
     if (!studentProfile) {
-      alert("Data siswa tidak tersedia untuk diunduh.");
+      toast.error("Data siswa tidak tersedia untuk diunduh.");
       return;
     }
 
@@ -161,7 +180,7 @@ const DetailStudentPage: React.FC = () => {
   const handleFormSubmit = async (formData: StudentProfileFormData) => {
     if (!userId && !isOwnProfile) {
       // Jika bukan profil sendiri, butuh userId
-      alert("ID Siswa tidak valid untuk update.");
+      toast.error("ID Siswa tidak valid untuk update.");
       return;
     }
     setIsSubmitting(true);
@@ -174,7 +193,7 @@ const DetailStudentPage: React.FC = () => {
         ? studentService.updateMyStudentProfile(formData)
         : studentService.updateSiswaById(targetUserId, formData));
 
-      alert("Profil siswa berhasil diperbarui!");
+      toast.success("Profil siswa berhasil diperbarui!");
       setIsEditMode(false); // Kembali ke mode view setelah simpan
       loadStudentProfile(); // Muat ulang data
     } catch (err) {
@@ -182,24 +201,41 @@ const DetailStudentPage: React.FC = () => {
       const errorMessage =
         err instanceof Error ? err.message : "Gagal menyimpan data.";
       setError(errorMessage);
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Dashboard", to: "/dashboard" },
-    // Jika ini diakses dari daftar siswa Guru BK
-    ...(loggedInUser?.role === "guru_bk" || loggedInUser?.role === "admin"
-      ? [{ label: "Daftar Siswa", to: "/dashboard/guru/daftar-siswa" }]
-      : []),
-    // Jika ini adalah profil siswa sendiri
-    ...(isOwnProfile ? [{ label: "Profil Saya" }] : []),
-    ...(!isOwnProfile
-      ? [{ label: studentProfile?.name || `Profil Siswa ID: ${userId}` }]
-      : []),
-  ];
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    const items: BreadcrumbItem[] = [];
+
+    // 1. Tentukan link "rumah" berdasarkan peran
+    if (loggedInUser?.role === "admin" || loggedInUser?.role === "guru_bk") {
+      items.push({ label: "Dashboard", to: "/dashboard" });
+    } else if (loggedInUser?.role === "siswa") {
+      // Siswa mungkin tidak punya dashboard, 'rumah' mereka adalah '/'
+      items.push({ label: "Home", to: "/" });
+    }
+
+    // 2. Tentukan link tengah jika bukan melihat profil sendiri
+    if (!isOwnProfile) {
+      if (loggedInUser?.role === "admin") {
+        items.push({ label: "User Management", to: "/user-management" });
+      } else if (loggedInUser?.role === "guru_bk") {
+        items.push({ label: "Daftar Siswa", to: "/guru/daftar-siswa" });
+      }
+    }
+
+    // 3. Tambahkan label halaman saat ini
+    const currentPageLabel = isOwnProfile
+      ? "Profil Saya"
+      : studentProfile?.name || `Profil Siswa`;
+
+    items.push({ label: currentPageLabel });
+
+    return items;
+  }, [loggedInUser, isOwnProfile, studentProfile, userId]);
 
   if (isLoading) {
     return (

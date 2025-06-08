@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Eye,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import Button from "../../components/ui/Button";
 import { Card, CardContent } from "../../components/ui/Card";
 import UserManagementForm from "../../components/admin/UserManagementForm";
@@ -55,8 +56,8 @@ const UserManagementPage: React.FC = () => {
       setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch users:", error);
-      alert(
-        `Gagal memuat pengguna: ${
+      toast.error(
+        `Gagal memuat daftar pengguna: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
@@ -129,10 +130,10 @@ const UserManagementPage: React.FC = () => {
       try {
         await userService.deleteUser(userId);
         loadUsers();
-        alert(`Pengguna berhasil dihapus.`);
+        toast.success(`Pengguna berhasil dihapus.`);
       } catch (error) {
         console.error("Failed to delete user:", error);
-        alert(
+        toast.error(
           `Gagal menghapus pengguna: ${
             error instanceof Error ? error.message : String(error)
           }`
@@ -152,17 +153,17 @@ const UserManagementPage: React.FC = () => {
           data as UserUpdateData
         );
         loadUsers();
-        alert(`Pengguna ${updatedUser.name} berhasil diperbarui.`);
+        toast.success(`Pengguna ${updatedUser.name} berhasil diperbarui.`);
       } else {
         const newUser = await userService.createUser(data as UserCreationData);
         loadUsers();
-        alert(`Pengguna ${newUser.name} berhasil ditambahkan.`);
+        toast.success(`Pengguna ${newUser.name} berhasil ditambahkan.`);
       }
       setIsFormOpen(false);
       setEditingUser(null);
     } catch (error) {
       console.error("Failed to submit form:", error);
-      alert(
+      toast.error(
         `Gagal memproses data pengguna: ${
           error instanceof Error ? error.message : String(error)
         }`
@@ -179,7 +180,7 @@ const UserManagementPage: React.FC = () => {
 
   const handleDownloadCSV = () => {
     if (filteredUsers.length === 0) {
-      alert("Tidak ada data untuk diunduh.");
+      toast.error("Tidak ada data untuk diunduh.");
       return;
     }
     const headers = "ID,Nama,Username,Email,Peran\n";

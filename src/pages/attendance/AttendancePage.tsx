@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import Button from "../../components/ui/Button"; // Pastikan path ini benar
-import AttendanceMap from "../../components/maps/AttendanceMap"; // Pastikan path ini benar
-import Modal from "../../components/ui/Modal"; // Impor komponen Modal
+import React, { useState, useEffect, useCallback } from "react";
+import Button from "../../components/ui/Button";
+import AttendanceMap from "../../components/maps/AttendanceMap";
+import Modal from "../../components/ui/Modal";
 import {
   Loader,
   MapPin,
@@ -14,6 +14,10 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import L from "leaflet";
+import toast from "react-hot-toast";
+import { useAuthStore } from "../../store/authStore";
+import * as attendanceService from "../../services/attendanceService";
+import type { SubmitAttendancePayload } from "../../services/attendanceService";
 
 const CAMPUS_COORDINATES = {
   latitude: -7.633,
@@ -41,37 +45,63 @@ function calculateDistance(
   return distance;
 }
 
+type AttendanceStatus = "HADIR" | "IZIN" | "SAKIT";
+
 const AttendancePage: React.FC = () => {
+  const { user } = useAuthStore();
   const [attendanceMode, setAttendanceMode] = useState<
     "LURING" | "DARING" | null
   >(null);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [submittingStatus, setSubmittingStatus] =
+    useState<AttendanceStatus | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState<boolean>(false);
   const [isWithinCampus, setIsWithinCampus] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<L.LatLngExpression | null>(
     null
   );
-
-  // --- State untuk Modal ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [absenceReason, setAbsenceReason] = useState("");
   const [selectedStatusForModal, setSelectedStatusForModal] = useState<
     "IZIN" | "SAKIT" | null
   >(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => {
-      clearInterval(timer);
-    };
+  const checkInitialAttendanceStatus = useCallback(async () => {
+    setIsPageLoading(true);
+    try {
+      const todayAttendance = await attendanceService.getMyTodaysAttendance();
+      if (todayAttendance && todayAttendance.status) {
+        setCurrentStatus(todayAttendance.status);
+        if (todayAttendance.workCode) {
+          setAttendanceMode(todayAttendance.workCode as "LURING" | "DARING");
+        }
+      }
+    } catch (error: any) {
+      if (
+        error.message.includes("404") ||
+        error.message.toLowerCase().includes("belum ada data")
+      ) {
+        setCurrentStatus(null);
+      } else {
+        toast.error(`Gagal memuat status: ${error.message}`);
+      }
+    } finally {
+      setIsPageLoading(false);
+    }
   }, []);
 
-  const checkUserLocation = () => {
+  useEffect(() => {
+    if (user) {
+      checkInitialAttendanceStatus();
+    }
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [user, checkInitialAttendanceStatus]);
+
+  const checkUserLocation = useCallback(() => {
     setIsLocationLoading(true);
     setLocationError(null);
     if (!navigator.geolocation) {
@@ -99,81 +129,88 @@ const AttendancePage: React.FC = () => {
         setIsLocationLoading(false);
       }
     );
-  };
+  }, []);
 
-  const handleModeSelect = (mode: "LURING" | "DARING") => {
-    setAttendanceMode(mode);
-    checkUserLocation();
-  };
+  const handleModeSelect = useCallback(
+    (mode: "LURING" | "DARING") => {
+      setAttendanceMode(mode);
+      checkUserLocation();
+    },
+    [checkUserLocation]
+  );
 
-  const handleResetMode = () => {
+  const handleResetMode = useCallback(() => {
     setAttendanceMode(null);
     setUserLocation(null);
     setLocationError(null);
     setIsWithinCampus(false);
-    setIsLocationLoading(false);
-  };
+  }, []);
 
-  // Fungsi untuk membuka modal saat tombol Izin atau Sakit ditekan
-  const handleOpenAbsenceModal = (status: "IZIN" | "SAKIT") => {
+  const handleOpenAbsenceModal = useCallback((status: "IZIN" | "SAKIT") => {
     setSelectedStatusForModal(status);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  // Fungsi untuk mengirim data absensi, sekarang menerima alasan opsional
-  const handleMarkAttendance = async (
-    status: "HADIR" | "IZIN" | "SAKIT",
-    reason?: string
-  ) => {
-    setIsSubmitting(true);
-    // TODO: Ganti simulasi ini dengan pemanggilan API sesungguhnya
-    // Payload yang akan dikirim ke backend:
-    const payload = {
-      status: status,
-      mode: attendanceMode,
-      ...(reason && { reason: reason }), // Tambahkan alasan jika ada
-      ...(status === "HADIR" &&
-        attendanceMode === "LURING" &&
-        userLocation && {
-          location: {
-            latitude: (userLocation as L.LatLngTuple)[0],
-            longitude: (userLocation as L.LatLngTuple)[1],
-          },
-        }),
-    };
-    console.log("Mengirim data absensi:", payload);
+  const handleMarkAttendance = useCallback(
+    async (status: AttendanceStatus, reason?: string) => {
+      setSubmittingStatus(status);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setCurrentStatus(status);
-    setIsSubmitting(false);
-  };
+      const payload: SubmitAttendancePayload = {
+        action: status,
+        notes: reason,
+        work_code: attendanceMode,
+      };
 
-  // Fungsi yang dipanggil saat tombol 'Kirim Keterangan' di modal ditekan
-  const handleSubmitAbsenceReason = () => {
+      if (userLocation) {
+        payload.latitude = (userLocation as L.LatLngTuple)[0];
+        payload.longitude = (userLocation as L.LatLngTuple)[1];
+      } else if (attendanceMode === "LURING" && status === "HADIR") {
+        toast.error(
+          "Lokasi tidak ditemukan. Harap aktifkan lokasi dan coba lagi."
+        );
+        setSubmittingStatus(null);
+        return;
+      }
+
+      try {
+        const response = await attendanceService.submitStudentAttendance(
+          payload
+        );
+        toast.success(response.message || "Absensi berhasil dicatat!");
+        setCurrentStatus(response.data.status);
+      } catch (error: any) {
+        toast.error(`Gagal: ${error.message || "Terjadi kesalahan"}`);
+      } finally {
+        setSubmittingStatus(null);
+      }
+    },
+    [attendanceMode, userLocation]
+  );
+
+  const handleSubmitAbsenceReason = useCallback(() => {
     if (!absenceReason.trim() || !selectedStatusForModal) {
-      alert("Harap isi alasan Anda."); // Sebaiknya gunakan notifikasi yang lebih baik
+      toast.error("Harap isi alasan Anda.");
       return;
     }
     handleMarkAttendance(selectedStatusForModal, absenceReason);
     setIsModalOpen(false);
-    setAbsenceReason(""); // Reset input alasan
-    setSelectedStatusForModal(null); // Reset status terpilih untuk modal
-  };
+    setAbsenceReason("");
+    setSelectedStatusForModal(null);
+  }, [absenceReason, selectedStatusForModal, handleMarkAttendance]);
 
   const renderAttendanceActions = () => {
     if (isLocationLoading) {
       return (
         <div className='flex items-center justify-center p-8'>
           <Loader className='animate-spin w-8 h-8 text-gray-500 mr-3' />
-          <span className='text-gray-600'>Mencari lokasi Anda...</span>
+          <span>Mencari lokasi Anda...</span>
         </div>
       );
     }
     if (locationError) {
       return (
         <div className='p-4 bg-red-50 text-red-700 rounded-md flex items-center'>
-          <XCircle className='w-5 h-5 mr-3' />
-          {locationError}
+          <XCircle className='w-5 h-5 mr-3' /> {locationError}
         </div>
       );
     }
@@ -183,11 +220,10 @@ const AttendancePage: React.FC = () => {
           onClick={handleResetMode}
           variant='link'
           className='p-0 h-auto text-gray-600 hover:text-gray-800'
+          disabled={!!submittingStatus}
         >
-          <ArrowLeft className='w-4 h-4 mr-2' />
-          Pilih Ulang Mode
+          <ArrowLeft className='w-4 h-4 mr-2' /> Pilih Ulang Mode
         </Button>
-
         {attendanceMode && userLocation && (
           <AttendanceMap
             mode={attendanceMode}
@@ -200,7 +236,6 @@ const AttendancePage: React.FC = () => {
             isWithinCampus={isWithinCampus}
           />
         )}
-
         {attendanceMode === "LURING" && !isWithinCampus && (
           <div className='p-4 bg-yellow-50 text-yellow-700 rounded-md flex items-start'>
             <AlertTriangle className='w-5 h-5 mr-3 flex-shrink-0' />
@@ -212,11 +247,14 @@ const AttendancePage: React.FC = () => {
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <Button
             size='lg'
-            onClick={() => handleMarkAttendance("HADIR")} // Tidak perlu alasan untuk hadir
+            onClick={() => handleMarkAttendance("HADIR")}
+            // --- REVISI LOGIKA DISABLED DI SINI ---
             disabled={
-              (attendanceMode === "LURING" && !isWithinCampus) || isSubmitting
+              isLocationLoading ||
+              !!submittingStatus ||
+              (attendanceMode === "LURING" && !isWithinCampus)
             }
-            isLoading={isSubmitting && currentStatus !== "HADIR"} // Tampilkan loading hanya jika belum hadir
+            isLoading={submittingStatus === "HADIR"}
             className='w-full'
             rightIcon={<MapPin className='w-5 h-5' />}
           >
@@ -225,22 +263,24 @@ const AttendancePage: React.FC = () => {
           <Button
             size='lg'
             variant='outline'
-            onClick={() => handleOpenAbsenceModal("IZIN")} // Panggil modal untuk Izin
-            disabled={isSubmitting}
-            isLoading={isSubmitting && selectedStatusForModal === "IZIN"}
+            onClick={() => handleOpenAbsenceModal("IZIN")}
+            // --- REVISI LOGIKA DISABLED DI SINI ---
+            disabled={isLocationLoading || !!submittingStatus}
+            isLoading={submittingStatus === "IZIN"}
             className='w-full'
-            rightIcon={<ShieldAlert className='w-5 h-5' />}
+            rightIcon={<ShieldAlert className='h-5 h-5' />}
           >
             Izin
           </Button>
           <Button
             size='lg'
             variant='outline'
-            onClick={() => handleOpenAbsenceModal("SAKIT")} // Panggil modal untuk Sakit
-            disabled={isSubmitting}
-            isLoading={isSubmitting && selectedStatusForModal === "SAKIT"}
+            onClick={() => handleOpenAbsenceModal("SAKIT")}
+            // --- REVISI LOGIKA DISABLED DI SINI ---
+            disabled={isLocationLoading || !!submittingStatus}
+            isLoading={submittingStatus === "SAKIT"}
             className='w-full'
-            rightIcon={<XCircle className='w-5 h-5' />}
+            rightIcon={<XCircle className='h-5 h-5' />}
           >
             Sakit
           </Button>
@@ -278,6 +318,14 @@ const AttendancePage: React.FC = () => {
     );
   };
 
+  if (isPageLoading) {
+    return (
+      <div className='flex items-center justify-center min-h-[calc(100vh-200px)]'>
+        <Loader className='animate-spin w-10 h-10 text-primary-500' />
+      </div>
+    );
+  }
+
   return (
     <div className='max-w-4xl mx-auto p-4 md:p-6'>
       <div className='bg-white shadow-md rounded-lg p-6'>
@@ -292,7 +340,6 @@ const AttendancePage: React.FC = () => {
             day: "numeric",
           })}
         </p>
-
         <div className='text-center text-4xl font-mono tracking-widest text-gray-800 py-4 mb-4 bg-gray-100 rounded-lg'>
           {currentTime.toLocaleTimeString("id-ID", {
             hour: "2-digit",
@@ -300,7 +347,6 @@ const AttendancePage: React.FC = () => {
             second: "2-digit",
           })}
         </div>
-
         {currentStatus ? (
           <div className='flex flex-col items-center text-center p-8 bg-green-50 border-2 border-green-200 rounded-lg'>
             <CheckCircle className='w-16 h-16 text-green-500 mb-4' />
@@ -310,7 +356,7 @@ const AttendancePage: React.FC = () => {
             <p className='text-gray-600 mt-2'>
               Status Anda hari ini telah tercatat:{" "}
               <strong>
-                {currentStatus} ({attendanceMode})
+                {currentStatus} {attendanceMode ? `(${attendanceMode})` : ""}
               </strong>
             </p>
           </div>
@@ -327,7 +373,6 @@ const AttendancePage: React.FC = () => {
         )}
       </div>
 
-      {/* Tampilkan Modal di sini */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -343,12 +388,7 @@ const AttendancePage: React.FC = () => {
             className='block text-sm font-medium text-gray-700'
           >
             Mohon berikan alasan{" "}
-            {selectedStatusForModal === "IZIN"
-              ? "izin"
-              : selectedStatusForModal === "SAKIT"
-              ? "sakit"
-              : ""}{" "}
-            Anda.
+            {selectedStatusForModal === "IZIN" ? "izin" : "sakit"} Anda.
           </label>
           <textarea
             id='reason'
@@ -370,17 +410,16 @@ const AttendancePage: React.FC = () => {
                 setAbsenceReason("");
                 setSelectedStatusForModal(null);
               }}
+              disabled={
+                submittingStatus === "IZIN" || submittingStatus === "SAKIT"
+              }
             >
               Batal
             </Button>
             <Button
               onClick={handleSubmitAbsenceReason}
-              disabled={isSubmitting || !absenceReason.trim()}
-              isLoading={
-                isSubmitting &&
-                currentStatus !== "IZIN" &&
-                currentStatus !== "SAKIT"
-              }
+              disabled={!absenceReason.trim() || !!submittingStatus}
+              isLoading={submittingStatus === selectedStatusForModal}
             >
               Kirim Keterangan
             </Button>

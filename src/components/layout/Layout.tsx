@@ -1,4 +1,5 @@
 import React from "react";
+import { Toaster } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -25,6 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col'>
+      <Toaster position='top-center' reverseOrder={false} />
+
       <Navbar />
       <main className='flex-grow'>{children}</main>
       <Footer />

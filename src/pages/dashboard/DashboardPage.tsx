@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Tambahkan useCallback
 import { Link } from "react-router-dom";
 import {
   BarChart3,
@@ -21,17 +21,63 @@ import {
 } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { useAuthStore } from "../../store/authStore";
+import * as userService from "../../services/userService";
+import * as attendanceService from "../../services/attendanceService"; // Impor attendanceService
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
 
-  const stats = {
-    totalStudents: 256,
-    activeCases: 15,
-    attendanceToday: 242,
-    unreadMessages: 7,
-    pendingAssessments: 4,
-  };
+  // State untuk menyimpan data dinamis, termasuk total siswa
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStudents: 0,
+    attendanceToday: 0, // Nilai awal 0
+    activeCases: 15, // Masih statis
+    unreadMessages: 7, // Masih statis
+    pendingAssessments: 4, // Masih statis
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // --- FUNGSI PENGAMBILAN DATA DI-REFACTOR DENGAN useCallback ---
+  const fetchDashboardData = useCallback(async () => {
+    if (user && (user.role === "admin" || user.role === "guru_bk")) {
+      setIsLoadingStats(true);
+      try {
+        // Ambil data secara paralel untuk efisiensi
+        const todayDate = new Date().toISOString().split("T")[0];
+
+        const [allUsers, dailyReport] = await Promise.all([
+          userService.getUsers(),
+          attendanceService.getDailyReport(todayDate),
+        ]);
+
+        // Hitung total siswa
+        const studentCount = allUsers.filter((u) => u.role === "siswa").length;
+
+        // Hitung yang hadir hari ini
+        const presentTodayCount = dailyReport.filter(
+          (record) => record.status === "HADIR"
+        ).length;
+
+        // Perbarui state dengan semua data dinamis
+        setDashboardStats((prevStats) => ({
+          ...prevStats,
+          totalStudents: studentCount,
+          attendanceToday: presentTodayCount,
+        }));
+      } catch (error) {
+        console.error("Gagal mengambil data untuk dashboard:", error);
+        // Bisa tambahkan toast error di sini jika perlu
+      } finally {
+        setIsLoadingStats(false);
+      }
+    } else {
+      setIsLoadingStats(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const recentCases = [
     {
@@ -88,7 +134,7 @@ const DashboardPage: React.FC = () => {
       iconBgColor: "bg-purple-100",
       iconTextColor: "text-purple-600",
       link: "/dashboard/guru/daftar-siswa",
-      roles: ["guru_bk"],
+      roles: ["guru_bk", "admin"],
     },
     {
       title: "Student Directory",
@@ -105,8 +151,8 @@ const DashboardPage: React.FC = () => {
       icon: ListChecks,
       iconBgColor: "bg-success-100",
       iconTextColor: "text-success-600",
-      link: "/attendance-report",
-      roles: ["admin", "guru_bk"],
+      link: "/dashboard/attendance-report",
+      roles: ["guru_bk"],
     },
     {
       title: "New Case",
@@ -196,8 +242,33 @@ const DashboardPage: React.FC = () => {
                     Total Students
                   </dt>
                   <dd>
+                    {isLoadingStats ? (
+                      <div className='h-7 w-12 bg-gray-200 rounded animate-pulse'></div>
+                    ) : (
+                      <div className='text-lg font-bold text-gray-900'>
+                        {dashboardStats.totalStudents}
+                      </div>
+                    )}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className='bg-white shadow-sm hover:shadow-md transition-shadow'>
+          <CardContent className='p-5'>
+            <div className='flex items-center'>
+              <div className='flex-shrink-0 rounded-md bg-success-100 p-3'>
+                <Clock className='h-6 w-6 text-success-600' />
+              </div>
+              <div className='ml-5 w-0 flex-1'>
+                <dl>
+                  <dt className='text-sm font-medium text-gray-500 truncate'>
+                    Today's Attendance
+                  </dt>
+                  <dd>
                     <div className='text-lg font-bold text-gray-900'>
-                      {stats.totalStudents}
+                      {dashboardStats.attendanceToday}
                     </div>
                   </dd>
                 </dl>
@@ -218,28 +289,7 @@ const DashboardPage: React.FC = () => {
                   </dt>
                   <dd>
                     <div className='text-lg font-bold text-gray-900'>
-                      {stats.activeCases}
-                    </div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className='bg-white shadow-sm hover:shadow-md transition-shadow'>
-          <CardContent className='p-5'>
-            <div className='flex items-center'>
-              <div className='flex-shrink-0 rounded-md bg-success-100 p-3'>
-                <Clock className='h-6 w-6 text-success-600' />
-              </div>
-              <div className='ml-5 w-0 flex-1'>
-                <dl>
-                  <dt className='text-sm font-medium text-gray-500 truncate'>
-                    Today's Attendance
-                  </dt>
-                  <dd>
-                    <div className='text-lg font-bold text-gray-900'>
-                      {stats.attendanceToday}
+                      {dashboardStats.activeCases}
                     </div>
                   </dd>
                 </dl>
@@ -260,7 +310,7 @@ const DashboardPage: React.FC = () => {
                   </dt>
                   <dd>
                     <div className='text-lg font-bold text-gray-900'>
-                      {stats.unreadMessages}
+                      {dashboardStats.unreadMessages}
                     </div>
                   </dd>
                 </dl>
@@ -281,7 +331,7 @@ const DashboardPage: React.FC = () => {
                   </dt>
                   <dd>
                     <div className='text-lg font-bold text-gray-900'>
-                      {stats.pendingAssessments}
+                      {dashboardStats.pendingAssessments}
                     </div>
                   </dd>
                 </dl>

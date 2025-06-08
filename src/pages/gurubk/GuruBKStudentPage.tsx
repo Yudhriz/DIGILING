@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Download,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import Button from "../../components/ui/Button";
 import { Card, CardContent } from "../../components/ui/Card";
 import Breadcrumb from "../../components/ui/Breadcrumb";
@@ -38,7 +39,7 @@ const GuruBKStudentPage: React.FC = () => {
       setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch users:", error);
-      alert(
+      toast.error(
         `Gagal memuat daftar pengguna: ${
           error instanceof Error ? error.message : String(error)
         }`
@@ -93,7 +94,7 @@ const GuruBKStudentPage: React.FC = () => {
 
   const handleDownloadCSV = () => {
     if (filteredStudents.length === 0) {
-      alert("Tidak ada data siswa untuk diunduh.");
+      toast.error("Tidak ada data siswa untuk diunduh.");
       return;
     }
     const headers = "ID,Nama,Username,Email\n";

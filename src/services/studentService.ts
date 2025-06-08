@@ -173,25 +173,23 @@ const handleApiResponse = async (response: Response) => {
 // GET /api/siswa/profile - (SiswaController@showProfile)
 // Mengambil data profil lengkap siswa yang sedang login
 export const getMyStudentProfile = async (): Promise<StudentProfile> => {
-  const response = await fetch(`${API_BASE_URL}/siswa/profile`, {
-    // Asumsi endpoint
+  // --- PERUBAHAN DI SINI ---
+  const response = await fetch(`${API_BASE_URL}/profile`, {
     method: "GET",
-    headers: withAuth(), // Membutuhkan token siswa
+    headers: withAuth(), 
   });
   const data = await handleApiResponse(response);
-  // Backend Anda di SiswaController@showProfile sudah mengembalikan data siswa yang diformat
   return data as StudentProfile;
 };
 
-// PUT /api/siswa/profile - (SiswaController@updateProfile)
-// Mengupdate data profil siswa yang sedang login
+// PUT /api/profile -> SiswaController@updateProfile
 export const updateMyStudentProfile = async (
   profileData: StudentProfileFormData
 ): Promise<ApiResponseWithMessage> => {
-  const response = await fetch(`${API_BASE_URL}/siswa/profile`, {
-    // Asumsi endpoint
+  // --- PERUBAHAN DI SINI ---
+  const response = await fetch(`${API_BASE_URL}/profile`, {
     method: "PUT",
-    headers: withAuth(), // Membutuhkan token siswa
+    headers: withAuth(),
     body: JSON.stringify(profileData),
   });
   return handleApiResponse(response);
