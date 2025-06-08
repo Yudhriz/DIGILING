@@ -22,6 +22,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import GuruBKStudentPage from "./pages/gurubk/GuruBKStudentPage";
 import DetailStudentPage from "./pages/students/DetailStudentPage";
 import AttendanceReportPage from "./pages/reports/AttendanceReportPage";
+import CaseJournalPage from "./pages/cases/CaseJournalPage";
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -129,6 +130,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <AttendanceReportPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK JURNAL KASUS --- */}
+          <Route
+            path='/jurnal-kasus' // Gunakan path yang sama dengan di Navbar
+            element={
+              <ProtectedRoute>
+                <CaseJournalPage />
               </ProtectedRoute>
             }
           />

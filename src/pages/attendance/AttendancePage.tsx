@@ -23,7 +23,7 @@ const CAMPUS_COORDINATES = {
   latitude: -7.633,
   longitude: 111.5415,
 };
-const MAX_RADIUS_METERS = 250;
+const MAX_RADIUS_METERS = 200;
 
 function calculateDistance(
   coords1: { latitude: number; longitude: number },

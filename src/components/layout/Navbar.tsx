@@ -30,7 +30,7 @@ const navLinksConfig = {
   siswa: [
     { to: "/siswa/absensi", label: "Absensi Siswa" },
     { to: "/siswa/profile-saya", label: "Profil Siswa" },
-    { to: "/jurnal", label: "Jurnal Kasus" },
+    { to: "/jurnal-kasus", label: "Jurnal Kasus" },
     { to: "/aspirasi", label: "Wadah Aspirasi" },
     { to: "/konsultasi", label: "Konsultasi" },
   ],
