@@ -4,9 +4,7 @@ import { Loader, ArrowLeft, Edit, Save, Download } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Button from "../../components/ui/Button";
-import Breadcrumb from "../../components/ui/Breadcrumb";
-import type { BreadcrumbItem } from "../../components/ui/Breadcrumb";
-import DetailStudentForm from "../../components/students/DetailStudentForm"; // Form yang baru kita buat
+import ProfileSayaForm from "../../components/gurubk/ProfileSayaForm";
 import * as studentService from "../../services/studentService";
 import type {
   StudentProfile,
@@ -14,7 +12,7 @@ import type {
 } from "../../services/studentService";
 import { useAuthStore } from "../../store/authStore"; // Untuk cek peran jika perlu
 
-const DetailStudentPage: React.FC = () => {
+const ProfileSayaPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: loggedInUser } = useAuthStore();
@@ -193,11 +191,11 @@ const DetailStudentPage: React.FC = () => {
         ? studentService.updateMyStudentProfile(formData)
         : studentService.updateSiswaById(targetUserId, formData));
 
-      toast.success("Profil siswa berhasil diperbarui!");
+      toast.success("Profil kamu berhasil diperbarui!");
       setIsEditMode(false); // Kembali ke mode view setelah simpan
       loadStudentProfile(); // Muat ulang data
     } catch (err) {
-      console.error("Gagal memperbarui profil siswa:", err);
+      console.error("Gagal memperbarui profil kamu:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Gagal menyimpan data.";
       setError(errorMessage);
@@ -206,36 +204,6 @@ const DetailStudentPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
-    const items: BreadcrumbItem[] = [];
-
-    // 1. Tentukan link "rumah" berdasarkan peran
-    if (loggedInUser?.role === "admin" || loggedInUser?.role === "guru_bk") {
-      items.push({ label: "Dashboard", to: "/dashboard" });
-    } else if (loggedInUser?.role === "siswa") {
-      // Siswa mungkin tidak punya dashboard, 'rumah' mereka adalah '/'
-      items.push({ label: "Home", to: "/" });
-    }
-
-    // 2. Tentukan link tengah jika bukan melihat profil sendiri
-    if (!isOwnProfile) {
-      if (loggedInUser?.role === "admin") {
-        items.push({ label: "User Management", to: "/dashboard/user-management" });
-      } else if (loggedInUser?.role === "guru_bk") {
-        items.push({ label: "Daftar Siswa", to: "/guru/daftar-siswa" });
-      }
-    }
-
-    // 3. Tambahkan label halaman saat ini
-    const currentPageLabel = isOwnProfile
-      ? "Profil Saya"
-      : studentProfile?.name || `Profil Siswa`;
-
-    items.push({ label: currentPageLabel });
-
-    return items;
-  }, [loggedInUser, isOwnProfile, studentProfile, userId]);
 
   if (isLoading) {
     return (
@@ -277,13 +245,12 @@ const DetailStudentPage: React.FC = () => {
 
   return (
     <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
-      <Breadcrumb items={breadcrumbItems} />
       <div className='flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2'>
         <div className='flex-1'>
           <h1 className='text-2xl font-bold text-gray-900'>
             {isOwnProfile
               ? "Profil Saya"
-              : `Profil Siswa: ${studentProfile.name}`}
+              : `Profil Saya: ${studentProfile.name}`}
           </h1>
           {isOwnProfile && studentProfile.username && (
             <p className='text-sm text-gray-600'>
@@ -320,7 +287,7 @@ const DetailStudentPage: React.FC = () => {
             <Button
               onClick={() =>
                 document
-                  .querySelector<HTMLFormElement>("#detailStudentForm form")
+                  .querySelector<HTMLFormElement>("#profileSayaForm form")
                   ?.requestSubmit()
               }
               isLoading={isSubmitting}
@@ -338,10 +305,10 @@ const DetailStudentPage: React.FC = () => {
         </p>
       )}
 
-      <div id='detailStudentForm'>
+      <div id='profileSayaForm'>
         {" "}
         {/* Wrapper untuk mempermudah submit dari tombol luar */}
-        <DetailStudentForm
+        <ProfileSayaForm
           onSubmit={handleFormSubmit}
           onCancel={() => {
             setIsEditMode(false);
@@ -356,4 +323,4 @@ const DetailStudentPage: React.FC = () => {
   );
 };
 
-export default DetailStudentPage;
+export default ProfileSayaPage;

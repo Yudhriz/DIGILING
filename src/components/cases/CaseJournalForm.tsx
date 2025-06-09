@@ -1,13 +1,16 @@
 import React, { useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import Button from "../ui/Button";
-import type { CaseJournalFormData } from "../../services/caseJournalService";
+import type { StudentCaseFormData } from "../../services/studentCaseService";
+import type { User } from "../../services/userService"; // Impor tipe User
 
 interface CaseJournalFormProps {
-  onSubmit: SubmitHandler<CaseJournalFormData>;
+  onSubmit: SubmitHandler<StudentCaseFormData>;
   onCancel: () => void;
-  initialData?: Partial<CaseJournalFormData>;
+  initialData?: Partial<StudentCaseFormData>;
   isLoading?: boolean;
+  isEditMode: boolean;
+  studentList: User[]; // <-- TAMBAHKAN PROP INI
 }
 
 const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
@@ -15,20 +18,22 @@ const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
   onCancel,
   initialData,
   isLoading,
+  isEditMode,
+  studentList,
 }) => {
+  // ... sisa kode form ini tidak perlu diubah ...
+  // Ia akan menggunakan prop 'studentList' untuk membuat dropdown.
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<CaseJournalFormData>({
-    defaultValues: initialData || {
-      date: new Date().toISOString().split("T")[0],
-    },
+  } = useForm<StudentCaseFormData>({
+    /* ... */
   });
 
   useEffect(() => {
-    reset(initialData || { date: new Date().toISOString().split("T")[0] });
+    reset(initialData || { case_date: new Date().toISOString().split("T")[0] });
   }, [initialData, reset]);
 
   const commonInputClass =
@@ -39,31 +44,40 @@ const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
       <div>
-        <label htmlFor='studentId' className={labelClass}>
-          ID Siswa <span className='text-red-500'>*</span>
+        <label htmlFor='student_user_id' className={labelClass}>
+          Siswa <span className='text-red-500'>*</span>
         </label>
-        <input
-          id='studentId'
-          type='text'
+        <select
+          id='student_user_id'
           className={commonInputClass}
-          {...register("studentId", { required: "ID Siswa wajib diisi" })}
-          placeholder='Masukkan ID siswa yang terkait...'
-        />
-        {errors.studentId && (
-          <p className={errorTextClass}>{errors.studentId.message}</p>
+          {...register("student_user_id", { required: "Siswa wajib dipilih" })}
+          disabled={isEditMode || isLoading} // Nonaktifkan jika mode edit
+        >
+          <option value=''>Pilih Siswa...</option>
+          {studentList.map((student) => (
+            <option key={student.id} value={student.id}>
+              {student.name} ({student.username})
+            </option>
+          ))}
+        </select>
+        {errors.student_user_id && (
+          <p className={errorTextClass}>{errors.student_user_id.message}</p>
         )}
       </div>
+      
       <div>
-        <label htmlFor='date' className={labelClass}>
+        <label htmlFor='case_date' className={labelClass}>
           Tanggal Kasus <span className='text-red-500'>*</span>
         </label>
         <input
-          id='date'
+          id='case_date'
           type='date'
           className={commonInputClass}
-          {...register("date", { required: "Tanggal wajib diisi" })}
+          {...register("case_date", { required: "Tanggal wajib diisi" })}
         />
-        {errors.date && <p className={errorTextClass}>{errors.date.message}</p>}
+        {errors.case_date && (
+          <p className={errorTextClass}>{errors.case_date.message}</p>
+        )}
       </div>
       <div>
         <label htmlFor='topic' className={labelClass}>
@@ -81,18 +95,18 @@ const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
         )}
       </div>
       <div>
-        <label htmlFor='followUp' className={labelClass}>
+        <label htmlFor='follow_up' className={labelClass}>
           Tindak Lanjut <span className='text-red-500'>*</span>
         </label>
         <input
-          id='followUp'
+          id='follow_up'
           type='text'
           className={commonInputClass}
-          {...register("followUp", { required: "Tindak lanjut wajib diisi" })}
+          {...register("follow_up", { required: "Tindak lanjut wajib diisi" })}
           placeholder='Contoh: Melakukan layanan konseling'
         />
-        {errors.followUp && (
-          <p className={errorTextClass}>{errors.followUp.message}</p>
+        {errors.follow_up && (
+          <p className={errorTextClass}>{errors.follow_up.message}</p>
         )}
       </div>
       <div>
@@ -106,6 +120,7 @@ const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
           {...register("notes")}
         ></textarea>
       </div>
+
       <div className='flex justify-end space-x-3 pt-4 border-t'>
         <Button
           type='button'
@@ -116,7 +131,7 @@ const CaseJournalForm: React.FC<CaseJournalFormProps> = ({
           Batal
         </Button>
         <Button type='submit' variant='primary' isLoading={isLoading}>
-          {initialData?.studentId ? "Simpan Perubahan" : "Buat Jurnal Kasus"}
+          {isEditMode ? "Simpan Perubahan" : "Buat Jurnal Kasus"}
         </Button>
       </div>
     </form>

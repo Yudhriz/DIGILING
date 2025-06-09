@@ -6,35 +6,46 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import { Card, CardContent } from "../../components/ui/Card";
 import CaseJournalForm from "../../components/cases/CaseJournalForm";
-import * as caseJournalService from "../../services/caseJournalService";
+import * as caseService from "../../services/studentCaseService";
 import type {
-  CaseJournalRecord,
-  CaseJournalFormData,
-} from "../../services/caseJournalService";
+  StudentCaseRecord,
+  StudentCaseFormData,
+  StudentCaseUpdateData,
+} from "../../services/studentCaseService";
+import * as userService from "../../services/userService";
+import type { User } from "../../services/userService";
 import { useAuthStore } from "../../store/authStore";
 
 const CaseJournalPage: React.FC = () => {
   const { user } = useAuthStore();
-  const [cases, setCases] = useState<CaseJournalRecord[]>([]);
+  const [cases, setCases] = useState<StudentCaseRecord[]>([]);
+  const [studentList, setStudentList] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCase, setEditingCase] = useState<CaseJournalRecord | null>(
+  const [editingCase, setEditingCase] = useState<StudentCaseRecord | null>(
     null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isTeacherOrAdmin = user?.role === "guru_bk" || user?.role === "admin";
+  const isTeacherOrAdmin = useMemo(
+    () => user?.role === "guru_bk" || user?.role === "admin",
+    [user]
+  );
 
-  const loadCases = useCallback(async () => {
-    if (!user) return; // Jangan lakukan apa-apa jika user belum ada
+  const loadData = useCallback(async () => {
+    if (!user) return;
     setIsLoading(true);
     try {
-      const data = isTeacherOrAdmin
-        ? await caseJournalService.getAllCases()
-        : await caseJournalService.getMyCases(user.id);
-      setCases(data);
+      const caseData = await caseService.getCases(); // Menggunakan satu fungsi getCases
+      setCases(caseData);
+
+      if (isTeacherOrAdmin) {
+        const allUsers = await userService.getUsers();
+        // Beri tipe eksplisit pada parameter 'u'
+        setStudentList(allUsers.filter((u: User) => u.role === "siswa"));
+      }
     } catch (error: any) {
       toast.error(`Gagal memuat data: ${error.message}`);
     } finally {
@@ -43,20 +54,22 @@ const CaseJournalPage: React.FC = () => {
   }, [user, isTeacherOrAdmin]);
 
   useEffect(() => {
-    loadCases();
-  }, [loadCases]);
+    loadData();
+  }, [loadData]);
 
   const filteredCases = useMemo(() => {
     if (!searchTerm) return cases;
     return cases.filter(
       (c) =>
-        c.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.guruBkName.toLowerCase().includes(searchTerm.toLowerCase())
+        (c.studentName || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (c.topic || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.guruBkName || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [cases, searchTerm]);
 
-  const handleOpenModal = (caseRecord: CaseJournalRecord | null = null) => {
+  const handleOpenModal = (caseRecord: StudentCaseRecord | null = null) => {
     setEditingCase(caseRecord);
     setIsModalOpen(true);
   };
@@ -66,25 +79,27 @@ const CaseJournalPage: React.FC = () => {
     setEditingCase(null);
   };
 
-  const handleFormSubmit = async (data: CaseJournalFormData) => {
-    if (!user) {
-      toast.error("Anda harus login untuk melakukan aksi ini.");
-      return;
-    }
+  const handleFormSubmit = async (
+    data: StudentCaseFormData | StudentCaseUpdateData
+  ) => {
     setIsSubmitting(true);
     try {
       if (editingCase) {
-        await caseJournalService.updateCase(editingCase.id, data);
+        const updateData: StudentCaseUpdateData = {
+          topic: data.topic,
+          follow_up: data.follow_up,
+          case_date: data.case_date,
+          notes: data.notes,
+        };
+        await caseService.updateCase(editingCase.id, updateData);
         toast.success("Jurnal kasus berhasil diperbarui.");
       } else {
-        await caseJournalService.createCase(data, {
-          id: user.id,
-          name: user.name,
-        });
+        // Hapus argumen kedua, backend akan mengambil info guru dari token
+        await caseService.createCase(data as StudentCaseFormData);
         toast.success("Jurnal kasus berhasil dibuat.");
       }
       handleCloseModal();
-      await loadCases(); // Muat ulang data setelah submit
+      await loadData();
     } catch (error: any) {
       toast.error(`Gagal: ${error.message}`);
     } finally {
@@ -95,9 +110,9 @@ const CaseJournalPage: React.FC = () => {
   const handleDelete = async (caseId: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus jurnal kasus ini?")) {
       try {
-        await caseJournalService.deleteCase(caseId);
+        await caseService.deleteCase(caseId);
         toast.success("Jurnal kasus berhasil dihapus.");
-        await loadCases();
+        await loadData();
       } catch (error: any) {
         toast.error(`Gagal menghapus: ${error.message}`);
       }
@@ -111,6 +126,17 @@ const CaseJournalPage: React.FC = () => {
     },
     { label: "Jurnal Kasus Siswa" },
   ];
+
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "-";
+    return new Date(
+      dateString.includes("T") ? dateString : `${dateString}T00:00:00`
+    ).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
 
   return (
     <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
@@ -133,8 +159,8 @@ const CaseJournalPage: React.FC = () => {
             <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400' />
             <input
               type='text'
-              placeholder='Cari berdasarkan nama siswa atau topik...'
-              className='w-full pl-10 pr-4 py-2 border rounded-md'
+              placeholder='Cari nama siswa, topik, atau guru...'
+              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -198,9 +224,7 @@ const CaseJournalPage: React.FC = () => {
                         {item.followUp}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {new Date(item.date + "T00:00:00").toLocaleDateString(
-                          "id-ID"
-                        )}
+                        {formatDate(item.caseDate)}
                       </td>
                       {isTeacherOrAdmin && (
                         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
@@ -246,8 +270,20 @@ const CaseJournalPage: React.FC = () => {
         <CaseJournalForm
           onSubmit={handleFormSubmit}
           onCancel={handleCloseModal}
-          initialData={editingCase || undefined}
+          initialData={
+            editingCase
+              ? {
+                  student_user_id: editingCase.studentId,
+                  topic: editingCase.topic,
+                  follow_up: editingCase.followUp,
+                  case_date: editingCase.caseDate,
+                  notes: editingCase.notes,
+                }
+              : { case_date: new Date().toISOString().split("T")[0] }
+          }
           isLoading={isSubmitting}
+          isEditMode={!!editingCase}
+          studentList={studentList}
         />
       </Modal>
     </div>

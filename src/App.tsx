@@ -23,6 +23,9 @@ import GuruBKStudentPage from "./pages/gurubk/GuruBKStudentPage";
 import DetailStudentPage from "./pages/students/DetailStudentPage";
 import AttendanceReportPage from "./pages/reports/AttendanceReportPage";
 import CaseJournalPage from "./pages/cases/CaseJournalPage";
+import AspirationPage from "./pages/aspirations/AspirationPage";
+import ConsultationPage from "./pages/consultation/ConsultationPage";
+import ProfileSayaPage from "./pages/gurubk/ProfileSayaPage";
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -114,6 +117,16 @@ function App() {
             }
           />
 
+          {/* --- ROUTE UNTUK HALAMAN PROFILE (GURU BK & ADMIN) --- */}
+          <Route
+            path='/profile-saya/:userId'
+            element={
+              <ProtectedRoute>
+                <ProfileSayaPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* --- ROUTE UNTUK HALAMAN SISWA MANAGEMENT (GURU BK) --- */}
           <Route
             path='/dashboard/guru/daftar-siswa'
@@ -134,12 +147,52 @@ function App() {
             }
           />
 
-          {/* --- ROUTE BARU UNTUK JURNAL KASUS --- */}
+          {/* --- ROUTE BARU UNTUK JURNAL KASUS (GURU BK) --- */}
           <Route
-            path='/jurnal-kasus' // Gunakan path yang sama dengan di Navbar
+            path='/dashboard/jurnal-kasus'
             element={
               <ProtectedRoute>
                 <CaseJournalPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK JURNAL KASUS (SISWA) --- */}
+          <Route
+            path='/siswa/jurnal-kasus'
+            element={
+              <ProtectedRoute>
+                <CaseJournalPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK WADAH ASPIRASI (GURU BK) --- */}
+          <Route
+            path='/dashboard/aspirasi'
+            element={
+              <ProtectedRoute>
+                <AspirationPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK WADAH ASPIRASI (SISWA) --- */}
+          <Route
+            path='/siswa/aspirasi'
+            element={
+              <ProtectedRoute>
+                <AspirationPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- ROUTE BARU UNTUK KONSULTASI --- */}
+          <Route
+            path='/konsultasi'
+            element={
+              <ProtectedRoute>
+                <ConsultationPage />
               </ProtectedRoute>
             }
           />

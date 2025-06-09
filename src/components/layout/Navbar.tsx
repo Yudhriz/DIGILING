@@ -4,7 +4,6 @@ import {
   Menu,
   X,
   Bell,
-  MessageSquare,
   LogOut,
   ChevronDown,
   User,
@@ -17,21 +16,19 @@ const navLinksConfig = {
   admin: [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/dashboard/user-management", label: "User Management" },
-    { to: "/dashboard/guru/daftar-siswa", label: "Daftar Siswa" }, // Admin bisa lihat juga
-    { to: "/reports", label: "Laporan" },
+    { to: "/dashboard/guru/daftar-siswa", label: "Daftar Siswa" },
   ],
   guru_bk: [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/dashboard/guru/daftar-siswa", label: "Daftar Siswa" },
-    { to: "/jurnal-kasus", label: "Jurnal Kasus" },
-    { to: "/konsultasi", label: "Konsultasi" },
-    { to: "/wadah-aspirasi", label: "Wadah Aspirasi" },
+    { to: "/dashboard/jurnal-kasus", label: "Jurnal Kasus" },
+    { to: "/dashboard/aspirasi", label: "Wadah Aspirasi" },
   ],
   siswa: [
     { to: "/siswa/absensi", label: "Absensi Siswa" },
     { to: "/siswa/profile-saya", label: "Profil Siswa" },
-    { to: "/jurnal-kasus", label: "Jurnal Kasus" },
-    { to: "/aspirasi", label: "Wadah Aspirasi" },
+    { to: "/siswa/jurnal-kasus", label: "Jurnal Kasus" },
+    { to: "/siswa/aspirasi", label: "Wadah Aspirasi" },
     { to: "/konsultasi", label: "Konsultasi" },
   ],
 };
@@ -54,9 +51,9 @@ const Navbar: React.FC = () => {
   // Tentukan link untuk halaman profil berdasarkan peran
   const profileLink = useMemo(() => {
     if (!user) return "/";
-    if (user.role === "siswa") return "/profil-saya";
+    if (user.role === "siswa") return "/siswa/profile-saya";
     // Admin dan Guru BK diarahkan ke halaman detail dengan ID mereka
-    return `/user-management/detail/${user.id}`;
+    return `/profile-saya/${user.id}`;
   }, [user]);
 
   if (
@@ -101,18 +98,6 @@ const Navbar: React.FC = () => {
           <div className='hidden sm:flex sm:items-center space-x-4'>
             {isLoggedIn && user ? (
               <>
-                <button
-                  className='p-2 rounded-full text-gray-500 hover:text-gray-600 focus:outline-none'
-                  aria-label='Notifikasi'
-                >
-                  <Bell className='h-6 w-6' />
-                </button>
-                <Link
-                  to='/pesan'
-                  className='p-2 rounded-full text-gray-500 hover:text-gray-600'
-                >
-                  <MessageSquare className='h-6 w-6' />
-                </Link>
                 <div className='relative'>
                   <button
                     onClick={toggleUserMenu}
@@ -144,13 +129,6 @@ const Navbar: React.FC = () => {
                         onClick={() => setIsUserMenuOpen(false)} // Tutup menu saat diklik
                       >
                         Profil Saya
-                      </Link>
-                      <Link
-                        to='/pengaturan'
-                        className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        Pengaturan
                       </Link>
                       <button
                         onClick={() => {
