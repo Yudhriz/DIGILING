@@ -175,30 +175,47 @@ const Navbar: React.FC = () => {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className='sm:hidden'>
+        <div className='sm:hidden' id='mobile-menu'>
           <div className='pt-2 pb-3 space-y-1'>
-            {isLoggedIn &&
+            {isLoggedIn ? (
+              // Tampilkan link navigasi jika SUDAH login
               navLinks.map((link) => (
                 <Link
                   key={`mobile-${link.to}`}
                   to={link.to}
                   onClick={() => setIsOpen(false)} // Tutup menu saat link diklik
-                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  className={`flex items-center pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                     location.pathname === link.to
-                      ? "border-[#0066cc] text-[#0066cc] bg-blue-50"
+                      ? "border-primary-500 text-primary-700 bg-primary-50"
                       : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
                   }`}
                 >
                   {link.label}
                 </Link>
-              ))}
+              ))
+            ) : (
+              // Tampilkan tombol Masuk/Daftar jika BELUM login
+              <div className='px-2 pt-2 pb-3 space-y-2'>
+                <Link to='/login' className='block'>
+                  <Button variant='outline' className='w-full'>
+                    Masuk
+                  </Button>
+                </Link>
+                <Link to='/register' className='block'>
+                  <Button variant='primary' className='w-full'>
+                    Daftar
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
+          {/* Bagian profil pengguna di mobile, hanya tampil jika SUDAH login */}
           {isLoggedIn && user && (
             <div className='pt-4 pb-3 border-t border-gray-200'>
               <div className='flex items-center px-4'>
                 <div className='flex-shrink-0'>
-                  <div className='h-10 w-10 rounded-full bg-[#0066cc] bg-opacity-10 flex items-center justify-center text-[#0066cc]'>
+                  <div className='h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600'>
                     {user.avatarUrl ? (
                       <img
                         className='h-10 w-10 rounded-full'
@@ -226,27 +243,20 @@ const Navbar: React.FC = () => {
                 <Link
                   to={profileLink}
                   onClick={() => setIsOpen(false)}
-                  className='block px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
+                  className='block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100'
                 >
                   Profil Saya
-                </Link>
-                <Link
-                  to='/pengaturan'
-                  onClick={() => setIsOpen(false)}
-                  className='block px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
-                >
-                  Pengaturan
                 </Link>
                 <button
                   onClick={() => {
                     logout();
                     setIsOpen(false);
                   }}
-                  className='block w-full text-left px-4 py-2 text-base text-gray-600 hover:bg-gray-100'
+                  className='block w-full text-left px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100'
                 >
                   <div className='flex items-center'>
                     <LogOut className='h-5 w-5 mr-2' />
-                    Keluar
+                    <span>Keluar</span>
                   </div>
                 </button>
               </div>
