@@ -38,28 +38,28 @@ const Footer = () => {
             <h3 className='text-lg font-semibold mb-4'>Menu</h3>
             <ul className='space-y-2'>
               <li>
-                <Link to='/layanan' className='hover:text-blue-200'>
-                  Layanan
+                <Link to='/siswa/absensi' className='hover:text-blue-200'>
+                  Absensi Siswa
                 </Link>
               </li>
               <li>
-                <Link to='/tipstrick' className='hover:text-blue-200'>
-                  Tips & Trick
+                <Link to='/siswa/profile-saya' className='hover:text-blue-200'>
+                  Profile Siswa
                 </Link>
               </li>
               <li>
-                <Link to='/artikel' className='hover:text-blue-200'>
-                  Artikel
+                <Link to='/siswa/jurnal-kasus' className='hover:text-blue-200'>
+                  Jurnal Kasus
                 </Link>
               </li>
               <li>
-                <Link to='/informasi' className='hover:text-blue-200'>
-                  Informasi Terbaru
+                <Link to='/siswa/aspirasi' className='hover:text-blue-200'>
+                  Wadah Aspirasi
                 </Link>
               </li>
               <li>
-                <Link to='/hubungi' className='hover:text-blue-200'>
-                  Hubungi Kami
+                <Link to='/konsultasi' className='hover:text-blue-200'>
+                  Konsultasi
                 </Link>
               </li>
             </ul>
@@ -82,35 +82,13 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href='https://instagram.com/prodi_bk'
+                  href='https://instagram.com/bk.unipma'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center space-x-2 hover:text-blue-200'
                 >
                   <Instagram className='h-5 w-5' />
-                  <span>Prodi BK</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href='https://instagram.com/himabk_unipma'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='flex items-center space-x-2 hover:text-blue-200'
-                >
-                  <Instagram className='h-5 w-5' />
-                  <span>himabk_unipma</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href='https://classroom.google.com'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='flex items-center space-x-2 hover:text-blue-200'
-                >
-                  <Instagram className='h-5 w-5' />
-                  <span>Kelas</span>
+                  <span>bk.unipma</span>
                 </a>
               </li>
             </ul>
