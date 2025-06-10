@@ -14,7 +14,7 @@ const HomePage: React.FC = () => {
               <h1 className='text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl'>
                 <span className='block'>DIGILING</span>
                 <span className='block text-blue-200'>
-                  Digital Sistem Informasi Manajemen Bimbingan Konseling
+                  Sistem Informasi Manajemen Bimbingan Konseling
                 </span>
               </h1>
               <p className='mt-3 text-base text-blue-100 sm:mt-5 sm:text-lg sm:max-w-xl'>
