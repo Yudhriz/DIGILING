@@ -223,7 +223,7 @@ const DetailStudentPage: React.FC = () => {
       if (loggedInUser?.role === "admin") {
         items.push({ label: "User Management", to: "/dashboard/user-management" });
       } else if (loggedInUser?.role === "guru_bk") {
-        items.push({ label: "Daftar Siswa", to: "/guru/daftar-siswa" });
+        items.push({ label: "Daftar Siswa", to: "/dashboard/guru/daftar-siswa" });
       }
     }
 
